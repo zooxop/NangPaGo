@@ -1,11 +1,103 @@
-# NangPaGo
+# 🧑‍💻문철현 - 담당 역할 & 기여 내용
+
+### 1. 코드 통일성을 위한 공통 코드 개발, 팀 코드 템플릿으로 적용
+- `RuntimeException` 을 상속받은 **커스텀 Global 예외 처리 클래스** 개발
+  - [GlobalExceptionHandler](NangPaGo-api/NangPaGo-common/src/main/java/com/mars/common/exception/GlobalExceptionHandler.java)
+- 예외 코드를 Enum으로 표준화하여 타입 안정성 확보, 오타 방지
+  - [NPGExceptionType](NangPaGo-api/NangPaGo-common/src/main/java/com/mars/common/exception/NPGExceptionType.java)
+
+```java
+// 예외 처리 예시 
+public UserResponseDto getCurrentUser(Long userId) {
+    return UserResponseDto.from(userRepository.findById(userId)
+      .orElseThrow(NPGExceptionType.NOT_FOUND_USER::of));  // 예외 타입을 Enum으로 설계
+}
+```
+
+- 어노테이션으로 인증 로직 및 로그 기록을 처리하도록 AOP 활용
+  - JWT 인증: [AuthenticationAspect](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/aop/auth/AuthenticationAspect.java)
+  - 방문 로그 기록: [VisitLogAspect](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/aop/visit/VisitLogAspect.java)
+  - 감사 로그 기록: [AuditLogAspect](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/aop/audit/AuditLogAspect.java)
+
+```java
+// 어노테이션 활용 예시
+@AuditLog(action = AuditActionType.COMMUNITY_CREATE,
+          dtoType = CommunityRequestDto.class)
+@Operation(summary = "게시물 작성")
+@AuthenticatedUser
+@PostMapping
+public ResponseDto<CommunityResponseDto> create() {
+  ...
+  ...
+}
+```
+
+### 2. 동시성 문제 해결을 위해 메시지 큐(RabbitMQ)를 도입, 비동기 처리
+- [블로그 - 동시성 문제 해결을 위한 메시지 큐 사용기](https://cloverlaun.tistory.com/99)
+- 시간 지연이 발생하는 데이터 처리를 비동기로 전환하여 사용자 **응답 시간 개선**
+- 기존 조회 쿼리의 `@Lock` 을 제거하여 **DB 부하 감소** 효과
+- RabbitMQ Config 코드 추상화, 공통 코드 분리
+  - 추상 Interface: [RabbitMQConfig](NangPaGo-api/NangPaGo-common/src/main/java/com/mars/common/config/rabbitmq/RabbitMQConfig.java)
+  - 구현 예제: [CommunityLikeRabbitConfig](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/config/rabbitmq/impl/CommunityLikeRabbitConfig.java)
+- 메시지 큐 기반 **비동기** 처리 Work Flow
+
+<img src="assets/asynchronous-flow.png" width="70%" alt="asynchronous-flow">
+
+### 3. Service 클래스 간 결합도 감소를 위한 이벤트 기반 아키텍처 구축
+- Spring 내장 `ApplicationEvent` 활용
+  - 구현 예제: SSE(Server-Sent-Event) 발송 코드 
+    - Event 객체: [RecipeLikeEvent](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/domain/recipe/event/RecipeLikeEvent.java)
+    - Event 리스너: [RecipeLikeEventListener](NangPaGo-api/NangPaGo-app/src/main/java/com/mars/app/domain/recipe/event/RecipeLikeEventListener.java)
+```java
+// Event Publish 예제
+public class RecipeLikeMessageConsumer {
+    // Event 발생을 위한 Publisher
+    private final ApplicationEventPublisher sseEventPublisher;
+    // 이벤트 발생
+    private void publishRecipeLikeEvent() {
+        sseEventPublisher.publishEvent(
+            RecipeLikeEvent.of({...})
+        );
+    }
+}
+```
+
+<img src="assets/event-driven-architecture.png" width="70%" alt="event-driven-architecture">
+
+### 4. Jenkins를 활용한 CI/CD 파이프라인 구축
+- 서비스 다운타임 0건 달성을 위한 **Blue/Green 배포** 환경 구성
+  - Jenkins 배포 스크립트: [Jenkinsfile](jenkins/nangpago-app/Jenkinsfile)
+  - Blue/Green 배포 스크립트: [deploy.sh](deploy/nangpago-app/deploy.sh)
+- 배포 절차 간소화
+  - Github 저장소 "Releases" 신규 버전이 Publish 되었을 때 Webhook 발생
+  - Jenkins는 Webhook을 수신하여 빌드를 유발
+  - 팀 Discord 채널에 배포 성공/실패 여부 알림
+
+<img src="assets/cicd-workflow.png" width="70%" alt="event-driven-architecture">
+
+### 5. macOS 홈 서버 구축 및 Docker 컨테이너 기반 인프라 시스템 관리 
+- 임대료 부담 없이 지속 가능한 운영을 위해 홈 서버를 구축
+- Docker 컨테이너 기반 인프라 시스템 구성 및 관리
+  - Jenkins, Database(MySQL, MongoDB), RabbitMQ, Elasticsearch
+- [블로그 - 맥북으로 홈 서버 구축하기](https://cloverlaun.tistory.com/100)
+
+### 6. Agile 프로젝트 관리
+- Jira 스프린트 및 티켓 할당을 통한 태스크 관리
+- Confluence 를 이용한 기술 문서 관리, 지식 공유 체계 수립
+- Github PR을 활용한 코드리뷰, Github Flow 협업 프로세스 구축
+
+<img src="assets/project-management.png" width="70%" alt="project-management">
+
+---
+
+---
+
+---
+
+
+## 프로젝트 소개
 
 ![alt text](assets/thumbnail.png)
-
-## 👋 소개
-
-냉장고 속 남은 재료로 무엇을 요리할지 고민되시나요?  
-**냉파고**는 냉장고 속 재료를 활용할 수 있는 레시피를 추천해주는 웹 애플리케이션입니다.
 
 ### 🛠️ 사용 기술
 
@@ -85,59 +177,6 @@
 
 ---
 
-## 📋 주요 기능
-
-### 🔑 사용자 인증
-- **OAuth 2.0 인증**: 소셜 로그인을 통한 간편한 회원가입 및 로그인
-- **JWT 토큰 관리**: Access/Refresh 토큰 기반의 안전한 사용자 인증
-- **관리자 페이지 세션 관리**: 관리자 페이지 전용 세션 기반 인증
-
-### 🗂 마이페이지
-- **프로필 관리**: 닉네임 변경 및 중복 확인 기능 제공
-- **냉장고 관리**: 식재료 검색 및 관리, 추천 레시피 검색
-- **활동 내역**: 좋아요, 즐겨찾기한 레시피와 작성 댓글 기록 확인
-- **알림 설정**: SSE 기반 실시간 알림 설정 관리
-
-### 🔍 레시피 검색 및 추천
-- **재료 기반 검색**: 사용자가 입력한 재료를 바탕으로 레시피 추천
-- **자연어 처리**: 오타, 초성/중성 분리를 통해 정교한 검색 지원
-- **세부 정보 제공**: 상세 조리 과정과 영양 정보 표시
-- **이미지 최적화**: Firebase Storage를 활용한 레시피 이미지 최적화 제공
-- **실시간 인기도**: RabbitMQ를 통한 실시간 좋아요 수 반영
-
-### 🧊 냉장고 관리
-- **식재료 등록**: 사용자가 보유한 재료를 등록 및 관리
-- **자동완성 검색**: ElasticSearch 기반 식재료명 자동완성 기능
-- **중복 확인**: 이미 등록된 재료 중복 등록 방지
-- **레시피 추천**: ElasticSearch를 활용한 맞춤형 레시피 제공
-
-### 📖 레시피/커뮤니티 조회페이지
-- **회원 맞춤 서비스**: 회원/비회원 분리된 레시피 추천 리스트 제공
-- **게시물 관리**: 커뮤니티 게시물 공개/비공개 설정 및 비회원 접근 제한
-- **이미지 최적화**: 이미지 리사이징 및 포맷 최적화
-
-### 👥 커뮤니티
-- **게시물 관리**: 작성, 수정, 삭제, 조회 기능 지원
-- **댓글 소통**: 사용자 간 댓글을 통한 소통 지원
-- **실시간 알림**: 댓글 작성 시 게시물 작성자에게 실시간 알림 제공
-- **사용자 레시피 공유 기능**: 사용자가 직접 레시피를 작성, 다른 사용자들과 공유 
-
----
-
-## 📊 데이터셋 및 전처리
-레시피 데이터셋 출처: 식품의약품안전처 조리식품 레시피 DB
-
-데이터 전처리:
-- 정규화식을 통한 전처리, 불필요한 열 제거 및 null 값 처리.
-- 재료 리스트를 ElasticSearch에 최적화된 형태로 변환.
-
-### 레시피 추천 흐름
-- 사용자가 보유한 재료 입력.
-- ElasticSearch에서 해당 재료를 포함한 레시피 검색.
-- 정렬 및 필터링 후 사용자가 선호할 만한 결과 반환.
-
----
-
 ## 🤝 협업 도구 & 워크플로우
 
 ### 🤼 협업 도구
@@ -174,7 +213,6 @@
 ![alt text](assets/server_architecture.png)
 
 ### CI/CD 파이프라인
-![alt text](assets/cicd.png)
 
 - **CI/CD 파이프라인 구성**
   - Git pre-push 훅을 통해 로컬 환경에서 테스트 자동 수행
