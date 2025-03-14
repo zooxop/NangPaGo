@@ -32,6 +32,8 @@ public ResponseDto<CommunityResponseDto> create() {
 }
 ```
 
+---
+
 ### 2. 동시성 문제 해결을 위해 메시지 큐(RabbitMQ)를 도입, 비동기 처리
 - [블로그 - 동시성 문제 해결을 위한 메시지 큐 사용기](https://cloverlaun.tistory.com/99)
 - 시간 지연이 발생하는 데이터 처리를 비동기로 전환하여 사용자 **응답 시간 개선**
@@ -42,6 +44,8 @@ public ResponseDto<CommunityResponseDto> create() {
 - 메시지 큐 기반 **비동기** 처리 Work Flow
 
 <img src="assets/asynchronous-flow.png" width="70%" alt="asynchronous-flow">
+
+---
 
 ### 3. Service 클래스 간 결합도 감소를 위한 이벤트 기반 아키텍처 구축
 - Spring 내장 `ApplicationEvent` 활용
@@ -64,6 +68,8 @@ public class RecipeLikeMessageConsumer {
 
 <img src="assets/event-driven-architecture.png" width="70%" alt="event-driven-architecture">
 
+---
+
 ### 4. Jenkins를 활용한 CI/CD 파이프라인 구축
 - 서비스 다운타임 0건 달성을 위한 **Blue/Green 배포** 환경 구성
   - Jenkins 배포 스크립트: [Jenkinsfile](jenkins/nangpago-app/Jenkinsfile)
@@ -75,18 +81,22 @@ public class RecipeLikeMessageConsumer {
 
 <img src="assets/cicd-workflow.png" width="70%" alt="event-driven-architecture">
 
+---
+
 ### 5. macOS 홈 서버 구축 및 Docker 컨테이너 기반 인프라 시스템 관리 
 - 임대료 부담 없이 지속 가능한 운영을 위해 홈 서버를 구축
 - Docker 컨테이너 기반 인프라 시스템 구성 및 관리
   - Jenkins, Database(MySQL, MongoDB), RabbitMQ, Elasticsearch
 - [블로그 - 맥북으로 홈 서버 구축하기](https://cloverlaun.tistory.com/100)
 
+---
+
 ### 6. Agile 프로젝트 관리
 - Jira 스프린트 및 티켓 할당을 통한 태스크 관리
 - Confluence 를 이용한 기술 문서 관리, 지식 공유 체계 수립
 - Github PR을 활용한 코드리뷰, Github Flow 협업 프로세스 구축
 
-<img src="assets/project-management.png" width="70%" alt="project-management">
+<img src="assets/project-management.png" width="100%" alt="project-management">
 
 ---
 
